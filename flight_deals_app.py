@@ -19,10 +19,7 @@ if round_trip:
 
 search_button = st.sidebar.button("🔍 Search Best Deals", type="primary")
 
-if search_button:
-    if not api_key or not api_secret:
-        st.error("Please enter your Amadeus API Key and Secret.")
-        st.stop()
+
 
     with st.spinner("Searching flights..."):
         try:
