@@ -6,28 +6,20 @@ import random
 
 st.set_page_config(page_title="YVR → BKK Premium Deals", layout="wide")
 
-# Custom CSS for Background and UI Styling
-st.markdown("""
+# Safe CSS Inject Block
+st.html("""
     <style>
     .stApp {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%) !important;
     }
-    .metric-card {
-        background-color: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        text-align: center;
-    }
-    .flight-card {
-        background-color: white;
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    div[data-testid="stMetric"] {
+        background-color: white !important;
+        padding: 15px !important;
+        border-radius: 10px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
     }
     </style>
-""", unsafe_with_html=True)
+""")
 
 st.title("✈️ YVR to BKK Flight Deals Finder")
 st.sidebar.header("Search Settings")
@@ -44,19 +36,18 @@ if round_trip:
 
 search_button = st.sidebar.button("🔍 Search Best Deals", type="primary")
 
-# Simulates flight data locally with airline logo support
 def generate_mock_deals(days_ahead, max_price, round_trip, return_days):
     today = datetime.now().date()
     deals = []
     
-    # Dictionary linking airline codes to public logo assets
+    # Map airlines to active domains for reliable logo rendering
     airlines_pool = {
-        "AC": "Air Canada",
-        "NH": "ANA",
-        "BR": "EVA Air",
-        "CI": "China Airlines",
-        "CX": "Cathay Pacific",
-        "SQ": "Singapore Airlines"
+        "AC": {"name": "Air Canada", "url": "https://clearbit.com"},
+        "NH": {"name": "ANA", "url": "https://clearbit.com"},
+        "BR": {"name": "EVA Air", "url": "https://clearbit.com"},
+        "CI": {"name": "China Airlines", "url": "https://clearbit.com"},
+        "CX": {"name": "Cathay Pacific", "url": "https://clearbit.com"},
+        "SQ": {"name": "Singapore Airlines", "url": "https://clearbit.com"}
     }
     
     for i in range(days_ahead):
@@ -76,11 +67,9 @@ def generate_mock_deals(days_ahead, max_price, round_trip, return_days):
             duration_mins = random.choice([0, 15, 30, 45])
             
             carrier_code = random.choice(list(airlines_pool.keys()))
-            carrier_name = airlines_pool[carrier_code]
+            carrier_data = airlines_pool[carrier_code]
             
             dep_date_str = dep_date.strftime("%Y-%m-%d")
-            # Clearbit API provides free instant logos by domain name
-            logo_url = f"https://clearbit.com{carrier_name.lower().replace(' ', '')}.com"
             flight_url = f"https://google.com{dep_date_str}"
             
             deals.append({
@@ -88,9 +77,8 @@ def generate_mock_deals(days_ahead, max_price, round_trip, return_days):
                 "Price (CAD)": float(round(price, 2)),
                 "Stops": stops,
                 "Duration": f"{duration_hours}h {duration_mins}m",
-                "Airline Code": carrier_code,
-                "Airline": carrier_name,
-                "Logo": logo_url,
+                "Airline": carrier_data["name"],
+                "Logo": carrier_data["url"],
                 "Link": flight_url
             })
     return deals
@@ -99,7 +87,7 @@ if "flight_deals" not in st.session_state:
     st.session_state.flight_deals = None
 
 if search_button:
-    with st.spinner("Generating premium flight schedules..."):
+    with st.spinner("Generating flight schedules..."):
         deals = generate_mock_deals(days_ahead, max_price, round_trip, return_days)
         if deals:
             st.session_state.flight_deals = pd.DataFrame(deals).sort_values("Price (CAD)")
@@ -107,7 +95,6 @@ if search_button:
             st.session_state.flight_deals = pd.DataFrame()
             st.warning("No deals found matching criteria.")
 
-# Render UI Filters, Summary Cards, and Clickable Image Tables
 if st.session_state.flight_deals is not None and not st.session_state.flight_deals.empty:
     df = st.session_state.flight_deals
 
@@ -121,7 +108,6 @@ if st.session_state.flight_deals is not None and not st.session_state.flight_dea
     filtered = df[(df["Stops"].isin(selected_stops)) & (df["Price (CAD)"] >= min_price)]
 
     if not filtered.empty:
-        # High-level overview metrics
         m1, m2, m3 = st.columns(3)
         with m1:
             st.metric("Lowest Price Found", f"${filtered['Price (CAD)'].min():,.2f} CAD")
@@ -135,19 +121,19 @@ if st.session_state.flight_deals is not None and not st.session_state.flight_dea
         trend.columns = ["Date", "Lowest Price", "Average Price"]
         st.line_chart(trend.set_index("Date"), use_container_width=True)
 
-        st.subheader("✨ Available Deals (Click Carrier Logo to Book)")
+        st.subheader("✨ Available Deals")
         
-        # Format Date Column for nicer presentation
         display_df = filtered.copy()
         display_df["Date"] = display_df["Date"].dt.strftime("%b %d, %Y")
         
-        # Use Streamlit Column Config to transform text URLs into clickable images
+        # Native link and image columns rendering
         st.dataframe(
-            display_df[["Logo", "Airline", "Date", "Price (CAD)", "Stops", "Duration"]], 
+            display_df[["Logo", "Airline", "Date", "Price (CAD)", "Stops", "Duration", "Link"]], 
             use_container_width=True, 
             hide_index=True,
             column_config={
-                "Logo": st.column_config.ImageColumn("Click to Book", help="Click on the logo to view flight details"),
+                "Logo": st.column_config.ImageColumn("Logo"),
+                "Link": st.column_config.LinkColumn("Book Deal", display_text="View on Google Flights"),
                 "Price (CAD)": st.column_config.NumberColumn("Price", format="$%.2f CAD")
             }
         )
@@ -159,4 +145,4 @@ elif st.session_state.flight_deals is not None and st.session_state.flight_deals
 else:
     st.info("Tap the 'Search Best Deals' button in the sidebar to generate data.")
 
-st.caption("YVR → BKK Flight Deals App (Visual Demo Mode)")
+st.caption("YVR → BKK Flight Deals App")
