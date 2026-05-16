@@ -8,6 +8,8 @@ st.title("✈️ YVR to BKK Flight Deals Finder")
 
 st.sidebar.header("Search Settings")
 
+api_key = st.sidebar.text_input("Amadeus API Key", value="", type="password")
+api_secret = st.sidebar.text_input("Amadeus API Secret", value="", type="password")
 
 days_ahead = st.sidebar.slider("Search next X days", 7, 60, 30)
 max_price = st.sidebar.number_input("Max price (CAD)", value=1500, step=50)
@@ -19,7 +21,10 @@ if round_trip:
 
 search_button = st.sidebar.button("🔍 Search Best Deals", type="primary")
 
-
+if search_button:
+    if not api_key or not api_secret:
+        st.error("Please enter your Amadeus API Key and Secret.")
+        st.stop()
 
     with st.spinner("Searching flights..."):
         try:
