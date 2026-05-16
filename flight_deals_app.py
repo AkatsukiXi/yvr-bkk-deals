@@ -28,15 +28,6 @@ st.html("""
         box-shadow: 0 4px 12px rgba(0,0,0,0.03) !important;
         margin-bottom: 15px !important;
     }
-    .cris-badge {
-        background-color: #e1f5fe;
-        color: #0288d1;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-weight: bold;
-        font-size: 13px;
-        display: inline-block;
-    }
     .cris-price {
         font-size: 28px;
         font-weight: bold;
@@ -80,7 +71,7 @@ airports = {
     "ICN - Seoul Incheon International Airport": "ICN",
 }
 
-# Main Horizontal Search Bar
+# MAIN ROW 1: Flight Location Routing & Date Selection Bar
 search_box = st.container(border=True)
 with search_box:
     c1, c2, c3, c4 = st.columns(4)
@@ -96,19 +87,23 @@ with search_box:
         st.text("") 
         search_button = st.button("Search Deals", type="primary", use_container_width=True)
 
-# Secondary Dynamic Sidebar Filters
-st.sidebar.header("Filter Results")
-max_price = st.sidebar.slider("Max Budget (CAD)", 400, 3500, 1600, step=50)
-
-# Upgraded dynamic user-friendly layout for flight stop tracking
-stop_options = ["Non-stop", "1 Stop", "2+ Stops"]
-selected_stop_labels = st.sidebar.multiselect("Flight Layout (Stops)", options=stop_options, default=stop_options)
-
-# Maps descriptive UI label layouts into mathematical numeric integer frames
-stop_mapping = {"Non-stop": 0, "1 Stop": 1, "2+ Stops": 2}
-selected_stops_integers = [stop_mapping[label] for label in selected_stop_labels]
-
-sort_by = st.sidebar.radio("Sort Results By", ["Cheapest Price", "Shortest Duration"])
+# MAIN ROW 2: Live Filters Panel (Brought out of the sidebar onto the center screen)
+filter_box = st.container(border=True)
+with filter_box:
+    f1, f2, f3 = st.columns(3)
+    with f1:
+        # Integrated clear visual controls for flight stops mapping
+        stop_options = ["Non-stop", "1 Stop", "2+ Stops"]
+        selected_stop_labels = st.multiselect("🏷️ Filter by Flight Layout (Stops)", options=stop_options, default=stop_options)
+        
+        # Mapping layout tags to array numbers logic
+        stop_mapping = {"Non-stop": 0, "1 Stop": 1, "2+ Stops": 2}
+        selected_stops_integers = [stop_mapping[label] for label in selected_stop_labels]
+        
+    with f2:
+        max_price = st.slider("💰 Max Budget (CAD)", 400, 3500, 1600, step=50)
+    with f3:
+        sort_by = st.radio("⚡ Sort Results By", ["Cheapest Price", "Shortest Duration"], horizontal=True)
 
 def generate_mock_deals(days_ahead, max_price, origin, destination):
     if origin == destination:
@@ -170,7 +165,7 @@ if "cris_deals" not in st.session_state or search_button:
 df = st.session_state.cris_deals
 
 if df is not None and not df.empty:
-    # Filter using mapped user selection choices
+    # Applying real-time multi-select filtering based on user input
     filtered_df = df[(df["Stops"].isin(selected_stops_integers)) & (df["Price"] <= max_price)]
     
     if sort_by == "Cheapest Price":
