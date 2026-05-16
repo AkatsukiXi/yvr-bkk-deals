@@ -4,66 +4,96 @@ from datetime import datetime, timedelta
 import pandas as pd
 import random
 
-st.set_page_config(page_title="YVR → BKK Premium Deals", layout="wide")
+st.set_page_config(page_title="Agoda Flight Deals | YVR → BKK", layout="wide", initial_sidebar_state="collapsed")
 
-# Safe CSS Inject Block
+# Agoda Brand Theme CSS Injection
 st.html("""
     <style>
     .stApp {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%) !important;
+        background-color: #f8f9fa !important;
     }
-    div[data-testid="stMetric"] {
+    /* Hero Banner Header */
+    .hero-banner {
+        background: linear-gradient(135deg, #2a2a2e 0%, #1a1a1c 100%);
+        padding: 40px;
+        border-radius: 16px;
+        color: white;
+        margin-bottom: 25px;
+        text-align: center;
+    }
+    /* Agoda-style card rows */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: white !important;
-        padding: 15px !important;
-        border-radius: 10px !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+        border: 1px solid #e4e4e4 !important;
+        border-radius: 12px !important;
+        padding: 20px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03) !important;
+        margin-bottom: 15px !important;
+    }
+    /* Quick Filter Badge Styling */
+    .agoda-badge {
+        background-color: #e1f5fe;
+        color: #0288d1;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 13px;
+        display: inline-block;
     }
     </style>
 """)
 
-st.title("✈️ YVR to BKK Flight Deals Finder")
-st.sidebar.header("Search Settings")
-st.sidebar.info("💡 Running in Premium Demo mode. No API key required!")
+# Top Agoda Branding Banner
+st.markdown("""
+    <div class="hero-banner">
+        <h1 style="color: white; margin: 0;">agoda <span style="font-weight: 300; font-size: 24px;">flight deals</span></h1>
+        <p style="color: #a1a1a8; margin-top: 5px;">Compare top-rated airlines from Vancouver to Bangkok</p>
+    </div>
+""", unsafe_with_html=True)
 
-days_ahead = st.sidebar.slider("Search next X days", 7, 60, 30)
-max_price = st.sidebar.number_input("Max price (CAD)", value=1500, step=50)
-adults = st.sidebar.number_input("Adults", 1, 5, 1)
-round_trip = st.sidebar.checkbox("Round trip", value=False)
+# Main Horizontal Search Bar (Agoda Pattern)
+search_box = st.container(border=True)
+with search_box:
+    c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
+    with c1:
+        origin = st.text_input("🛫 Flying from", value="Vancouver (YVR)", disabled=True)
+    with c2:
+        destination = st.text_input("🛬 Flying to", value="Bangkok (BKK)", disabled=True)
+    with c3:
+        search_days = st.slider("📅 Search Window (Days Ahead)", 7, 60, 30)
+    with c4:
+        st.markdown("<div style='height: 28px;'></div>", unsafe_with_html=True)
+        search_button = st.button("Search Deals", type="primary", use_container_width=True)
 
-return_days = 14
-if round_trip:
-    return_days = st.sidebar.slider("Return after X days", 7, 90, 14)
+# Secondary Dynamic Sidebar Filters (Kept minimal for sorting preferences)
+st.sidebar.header("Filter Results")
+max_price = st.sidebar.slider("Max Budget (CAD)", 800, 2500, 1600, step=50)
+selected_stops = st.sidebar.multiselect("Stops", [0, 1, 2], default=[0, 1, 2])
+sort_by = st.sidebar.radio("Sort Results By", ["Cheapest Price", "Shortest Duration"])
 
-search_button = st.sidebar.button("🔍 Search Best Deals", type="primary")
-
-def generate_mock_deals(days_ahead, max_price, round_trip, return_days):
+def generate_mock_deals(days_ahead, max_price):
     today = datetime.now().date()
     deals = []
     
-    # Map airlines to active domains for reliable logo rendering
     airlines_pool = {
-        "AC": {"name": "Air Canada", "url": "https://clearbit.com"},
-        "NH": {"name": "ANA", "url": "https://clearbit.com"},
-        "BR": {"name": "EVA Air", "url": "https://clearbit.com"},
-        "CI": {"name": "China Airlines", "url": "https://clearbit.com"},
-        "CX": {"name": "Cathay Pacific", "url": "https://clearbit.com"},
-        "SQ": {"name": "Singapore Airlines", "url": "https://clearbit.com"}
+        "AC": {"name": "Air Canada", "url": "https://clearbit.com", "rating": "4.2/5 Good"},
+        "NH": {"name": "ANA All Nippon Airways", "url": "https://clearbit.com", "rating": "4.8/5 Excellent"},
+        "BR": {"name": "EVA Air", "url": "https://clearbit.com", "rating": "4.7/5 Excellent"},
+        "CX": {"name": "Cathay Pacific", "url": "https://clearbit.com", "rating": "4.5/5 Excellent"},
+        "SQ": {"name": "Singapore Airlines", "url": "https://clearbit.com", "rating": "4.9/5 Top Choice"}
     }
     
     for i in range(days_ahead):
         dep_date = today + timedelta(days=i)
-        num_offers = random.randint(1, 3)
+        num_offers = random.randint(1, 2)
         
         for _ in range(num_offers):
-            base_price = 850 if not round_trip else 1200
-            day_variance = random.randint(-150, 450)
-            price = base_price + day_variance
-            
+            price = random.randint(850, 1950)
             if price > max_price:
                 continue
                 
             stops = random.choice([0, 1, 2])
-            duration_hours = random.randint(16, 28)
+            duration_hours = random.randint(15, 26)
             duration_mins = random.choice([0, 15, 30, 45])
             
             carrier_code = random.choice(list(airlines_pool.keys()))
@@ -73,76 +103,72 @@ def generate_mock_deals(days_ahead, max_price, round_trip, return_days):
             flight_url = f"https://google.com{dep_date_str}"
             
             deals.append({
-                "Date": pd.to_datetime(dep_date),
-                "Price (CAD)": float(round(price, 2)),
+                "DateObj": dep_date,
+                "Date": dep_date.strftime("%b %d, %Y"),
+                "Price": price,
                 "Stops": stops,
+                "DurationHours": duration_hours,
                 "Duration": f"{duration_hours}h {duration_mins}m",
                 "Airline": carrier_data["name"],
                 "Logo": carrier_data["url"],
+                "Rating": carrier_data["rating"],
                 "Link": flight_url
             })
     return deals
 
-if "flight_deals" not in st.session_state:
-    st.session_state.flight_deals = None
+# Manage state for results cache
+if "agoda_deals" not in st.session_state:
+    st.session_state.agoda_deals = None
 
-if search_button:
-    with st.spinner("Generating flight schedules..."):
-        deals = generate_mock_deals(days_ahead, max_price, round_trip, return_days)
-        if deals:
-            st.session_state.flight_deals = pd.DataFrame(deals).sort_values("Price (CAD)")
-        else:
-            st.session_state.flight_deals = pd.DataFrame()
-            st.warning("No deals found matching criteria.")
+# Automatically run default search on startup if empty
+if search_button or st.session_state.agoda_deals is None:
+    with st.spinner("Fetching today's top agoda flight rates..."):
+        raw_deals = generate_mock_deals(search_days, max_price)
+        st.session_state.agoda_deals = pd.DataFrame(raw_deals)
 
-if st.session_state.flight_deals is not None and not st.session_state.flight_deals.empty:
-    df = st.session_state.flight_deals
+df = st.session_state.agoda_deals
 
-    st.subheader("⚡ Interactive Filters")
-    col1, col2 = st.columns(2)
-    with col1:
-        selected_stops = st.multiselect("Filter by Stops", sorted(df["Stops"].unique()), default=sorted(df["Stops"].unique()))
-    with col2:
-        min_price = st.number_input("Minimum Budget Limit (CAD)", value=0, step=50)
-
-    filtered = df[(df["Stops"].isin(selected_stops)) & (df["Price (CAD)"] >= min_price)]
-
-    if not filtered.empty:
-        m1, m2, m3 = st.columns(3)
-        with m1:
-            st.metric("Lowest Price Found", f"${filtered['Price (CAD)'].min():,.2f} CAD")
-        with m2:
-            st.metric("Average Deal Price", f"${filtered['Price (CAD)'].mean():,.2f} CAD")
-        with m3:
-            st.metric("Total Flight Options", len(filtered))
-
-        st.subheader("📈 Price Trend")
-        trend = filtered.groupby("Date")["Price (CAD)"].agg(["min", "mean"]).reset_index()
-        trend.columns = ["Date", "Lowest Price", "Average Price"]
-        st.line_chart(trend.set_index("Date"), use_container_width=True)
-
-        st.subheader("✨ Available Deals")
-        
-        display_df = filtered.copy()
-        display_df["Date"] = display_df["Date"].dt.strftime("%b %d, %Y")
-        
-        # Native link and image columns rendering
-        st.dataframe(
-            display_df[["Logo", "Airline", "Date", "Price (CAD)", "Stops", "Duration", "Link"]], 
-            use_container_width=True, 
-            hide_index=True,
-            column_config={
-                "Logo": st.column_config.ImageColumn("Logo"),
-                "Link": st.column_config.LinkColumn("Book Deal", display_text="View on Google Flights"),
-                "Price (CAD)": st.column_config.NumberColumn("Price", format="$%.2f CAD")
-            }
-        )
+if df is not None and not df.empty:
+    # Apply sidebar post-filters
+    filtered_df = df[(df["Stops"].isin(selected_stops)) & (df["Price"] <= max_price)]
+    
+    # Apply user sorting rules
+    if sort_by == "Cheapest Price":
+        filtered_df = filtered_df.sort_values("Price", ascending=True)
     else:
-        st.info("No rows match the selected UI filters.")
+        filtered_df = filtered_df.sort_values("DurationHours", ascending=True)
 
-elif st.session_state.flight_deals is not None and st.session_state.flight_deals.empty:
-    st.info("No flights matched your budget parameters.")
+    # Highlighting the absolute cheapest recommendation row
+    if not filtered_df.empty:
+        cheapest_price = filtered_df["Price"].min()
+        
+        st.subheader("💡 Today's Top Recommendations")
+        
+        # Individual Booking Cards Streamlit loop
+        for idx, row in filtered_df.head(10).iterrows():
+            with st.container():
+                col_logo, col_info, col_stops, col_price = st.columns([1, 3, 2, 2])
+                
+                with col_logo:
+                    st.image(row["Logo"], width=65)
+                    st.caption(row["Airline"])
+                
+                with col_info:
+                    st.markdown(f"### 🗓️ {row['Date']}")
+                    st.markdown(f"<span class='agoda-badge'>⭐ {row['Rating']}</span>", unsafe_with_html=True)
+                
+                with col_stops:
+                    stops_text = "Direct Flight" if row["Stops"] == 0 else f"{row['Stops']} Stop(s)"
+                    st.markdown(f"**Duration:** {row['Duration']}")
+                    st.markdown(f"**Route:** {stops_text}")
+                
+                with col_price:
+                    # Highlights cheapest badge mimicking Agoda's marketing hooks
+                    if row["Price"] == cheapest_price:
+                        st.markdown("<span style='color: #ff567d; font-weight: bold; font-size:12px;'>🔥 CHEAPEST DEAL</span>", unsafe_with_html=True)
+                    st.markdown(f"<h2 style='margin:0; color:#111;'>${row['Price']} <span style='font-size:14px; color:#666;'>CAD</span></h2>", unsafe_with_html=True)
+                    st.link_button("Book Deal ➔", row["Link"], type="primary", use_container_width=True)
+    else:
+        st.info("No matching flights found for the active filter parameters.")
 else:
-    st.info("Tap the 'Search Best Deals' button in the sidebar to generate data.")
-
-st.caption("YVR → BKK Flight Deals App")
+    st.info("Adjust the top parameters and hit search to load flights.")
