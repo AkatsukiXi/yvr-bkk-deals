@@ -60,7 +60,7 @@ st.html("""
     </div>
 """)
 
-# Airport Dictionary Database (Major global hubs across continents)
+# Airport Dictionary Database
 airports = {
     "YVR - Vancouver International Airport": "YVR",
     "YYZ - Toronto Pearson International Airport": "YYZ",
@@ -100,8 +100,14 @@ with search_box:
 st.sidebar.header("Filter Results")
 max_price = st.sidebar.slider("Max Budget (CAD)", 400, 3500, 1600, step=50)
 
-# FIXED: Provided clear lists containing options and defaults for stops [0=Direct, 1=1 Stop, 2=2 Stops]
-selected_stops = st.sidebar.multiselect("Stops", options=[0, 1, 2], default=[0, 1, 2])
+# Upgraded dynamic user-friendly layout for flight stop tracking
+stop_options = ["Non-stop", "1 Stop", "2+ Stops"]
+selected_stop_labels = st.sidebar.multiselect("Flight Layout (Stops)", options=stop_options, default=stop_options)
+
+# Maps descriptive UI label layouts into mathematical numeric integer frames
+stop_mapping = {"Non-stop": 0, "1 Stop": 1, "2+ Stops": 2}
+selected_stops_integers = [stop_mapping[label] for label in selected_stop_labels]
+
 sort_by = st.sidebar.radio("Sort Results By", ["Cheapest Price", "Shortest Duration"])
 
 def generate_mock_deals(days_ahead, max_price, origin, destination):
@@ -125,7 +131,7 @@ def generate_mock_deals(days_ahead, max_price, origin, destination):
     
     for i in range(days_ahead):
         dep_date = today + timedelta(days=i)
-        num_offers = random.randint(1, 2)
+        num_offers = random.randint(1, 3)
         
         for _ in range(num_offers):
             price = random.randint(450, 2250)
@@ -133,7 +139,7 @@ def generate_mock_deals(days_ahead, max_price, origin, destination):
                 continue
                 
             stops = random.choice([0, 1, 2])
-            duration_hours = random.randint(5, 28)
+            duration_hours = random.randint(5, 12) if stops == 0 else random.randint(13, 28)
             duration_mins = random.choice([0, 15, 30, 45])
             
             carrier_code = random.choice(list(airlines_pool.keys()))
@@ -156,7 +162,6 @@ def generate_mock_deals(days_ahead, max_price, origin, destination):
             })
     return deals
 
-# Handle search logic state cleanly
 if "cris_deals" not in st.session_state or search_button:
     with st.spinner("Fetching custom routes and rates..."):
         raw_deals = generate_mock_deals(search_days, max_price, origin_code, dest_code)
@@ -165,7 +170,8 @@ if "cris_deals" not in st.session_state or search_button:
 df = st.session_state.cris_deals
 
 if df is not None and not df.empty:
-    filtered_df = df[(df["Stops"].isin(selected_stops)) & (df["Price"] <= max_price)]
+    # Filter using mapped user selection choices
+    filtered_df = df[(df["Stops"].isin(selected_stops_integers)) & (df["Price"] <= max_price)]
     
     if sort_by == "Cheapest Price":
         filtered_df = filtered_df.sort_values("Price", ascending=True)
@@ -190,7 +196,7 @@ if df is not None and not df.empty:
                     st.write(f"⭐ {row['Rating']}")
                 
                 with col_stops:
-                    stops_text = "Direct Flight" if row["Stops"] == 0 else f"{row['Stops']} Stop(s)"
+                    stops_text = "Non-stop" if row["Stops"] == 0 else f"{row['Stops']} Stop(s)"
                     st.markdown(f"**Duration:** {row['Duration']}")
                     st.markdown(f"**Route:** {stops_text}")
                 
