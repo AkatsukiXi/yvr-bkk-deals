@@ -85,11 +85,9 @@ search_box = st.container(border=True)
 with search_box:
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        # Dropdown selection for Origin Airport
         origin_label = st.selectbox("🛫 Flying from", options=list(airports.keys()), index=0)
         origin_code = airports[origin_label]
     with c2:
-        # Dropdown selection for Destination Airport (defaults to Bangkok)
         dest_label = st.selectbox("🛬 Flying to", options=list(airports.keys()), index=8)
         dest_code = airports[dest_label]
     with c3:
@@ -101,18 +99,18 @@ with search_box:
 # Secondary Dynamic Sidebar Filters
 st.sidebar.header("Filter Results")
 max_price = st.sidebar.slider("Max Budget (CAD)", 400, 3500, 1600, step=50)
-selected_stops = st.sidebar.multiselect("Stops", options=, default=)
+
+# FIXED: Provided clear lists containing options and defaults for stops [0=Direct, 1=1 Stop, 2=2 Stops]
+selected_stops = st.sidebar.multiselect("Stops", options=[0, 1, 2], default=[0, 1, 2])
 sort_by = st.sidebar.radio("Sort Results By", ["Cheapest Price", "Shortest Duration"])
 
 def generate_mock_deals(days_ahead, max_price, origin, destination):
-    # Quick protection check to avoid generating loops to identical locations
     if origin == destination:
         return []
         
     today = datetime.now().date()
     deals = []
     
-    # Expanded global airline mix matching regional airport logic
     airlines_pool = {
         "AC": {"name": "Air Canada", "url": "https://clearbit.com", "rating": "4.2/5 Good"},
         "NH": {"name": "ANA All Nippon Airways", "url": "https://clearbit.com", "rating": "4.8/5 Excellent"},
@@ -130,20 +128,18 @@ def generate_mock_deals(days_ahead, max_price, origin, destination):
         num_offers = random.randint(1, 2)
         
         for _ in range(num_offers):
-            # Dynamic price range estimation depending on whether routing requires a long haul
             price = random.randint(450, 2250)
             if price > max_price:
                 continue
                 
-            stops = random.choice()
+            stops = random.choice([0, 1, 2])
             duration_hours = random.randint(5, 28)
-            duration_mins = random.choice()
+            duration_mins = random.choice([0, 15, 30, 45])
             
             carrier_code = random.choice(list(airlines_pool.keys()))
             carrier_data = airlines_pool[carrier_code]
             
             dep_date_str = dep_date.strftime("%Y-%m-%d")
-            # Dynamic Google Flights URL mapping using user selection airport codes
             flight_url = f"https://google.com{destination}%20from%20{origin}%20on%20{dep_date_str}"
             
             deals.append({
@@ -160,7 +156,7 @@ def generate_mock_deals(days_ahead, max_price, origin, destination):
             })
     return deals
 
-# Clear cache whenever a user queries new destinations to ensure clean grid switching
+# Handle search logic state cleanly
 if "cris_deals" not in st.session_state or search_button:
     with st.spinner("Fetching custom routes and rates..."):
         raw_deals = generate_mock_deals(search_days, max_price, origin_code, dest_code)
